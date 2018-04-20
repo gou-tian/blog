@@ -1,0 +1,5 @@
+亲爱的 {{ user.username }}：
+    欢迎来到《幸福的饺子》！
+    为确认你的帐户，请按以下链接:
+    {{ url_for('auth.confirm', token=token, _external=True) }}
+    注意：这是一份系统自动发出的邮件，请勿回复！
