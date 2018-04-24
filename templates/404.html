@@ -6,6 +6,6 @@
 </head>
 <body>
     <h1>页面不存在（Page Not Found）（代码：404）</h1>
-    <img src="{{ url_for('static', filename = 'images/404_logo.png') }}" alt="">
+    <img src="{{ url_for('static', filename = 'images/404_logo.png', _external=True) }}" alt="Page Not Found">
 </body>
 </html>

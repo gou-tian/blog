@@ -1,29 +1,38 @@
-{% extends "bootstrap/base.html" %}
-{% block title %}幸福的饺子{% endblock title %}
-{% block navbar %}
-    <div class="navbar navbar-inverse" role="navigation">
-        <div class="container">
-            <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="sr-only">页面导航</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/">幸福的饺子</a>
-        </div>
-            <div class="navbar-collapse collapse">
-                <ul class="nav navbar-nav">
-                    <li><a href="/">首页</a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-{% endblock navbar %}
+{% extends "base.html" %}
+{% block title %}用户资料 - {{ user.username }}{% endblock %}
 {% block content %}
     <div class="container">
     <div class="page-header">
-        <h1>你好, {{ name }}!</h1>
+        <h1>{{ user.username }}!</h1>
+        {% if user.name or user.location %}
+    <p>
+        {% if user.name %}
+            <img class="img-rounded profile-thumbnail" src="{{ user.gravatar(size=256) }}">
+            <p>姓名：{{ user.name }}</p>
+        {% endif %}
+        {% if user.location %}
+            <p>所在位置： <a href="https://www.amap.com/search?query={{ user.location }}">{{ user.location }}</a></p>
+        {% endif %}
+    </p>
+    {% endif %}
+    {% if current_user.is_administrator() %}
+    <p>联系我：<a href="mailto:{{ user.email }}">{{ user.email }}</a></p>
+    {% endif %}
+    {% if user.about_me %}<p>{{ user.about_me }}</p>{% endif %}
+        <p>
+            注册时间：{{ moment(user.member_since).format("YYYY年MM月DD日") }}.
+        </p>
+        <p>
+            最后一次登录时间: {{ moment(user.last_seen).format("YYYY年MM月DD日HH时mm分") }}.
+        </p>
     </div>
+    {% if user == current_user %}
+        <a class="btn btn-default" href="{{ url_for('.edit_profile') }}">编辑个人资料</a>
+    {% endif %}
+    {% if current_user.is_administrator() %}
+        <a class="btn btn-danger" href="{{ url_for('.edit_profile_admin', id=user.id) }}">编辑个人资料(管理员)</a>
+    {% endif %}
+    <h3>Posts by {{ user.username }}</h3>
+    {% include '_posts.html' %}
 </div>
 {% endblock content %}
