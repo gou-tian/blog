@@ -32,6 +32,8 @@ class Config:
     FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN')
     # 邮件服务器
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # 分页
+    FLASKY_POSTS_PER_PAGE = 6
 
     @staticmethod
     def init_app(app):

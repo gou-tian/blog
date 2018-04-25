@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
+{% import "default/_macros.html" as macros %}
 {% block title %}幸福的饺子{% endblock %}
 
 {% block page_content %}
@@ -33,4 +34,15 @@
             </li>
         {% endfor %}
     </ul>
-{% endblock %}
+    {% include 'default/_posts.html' %}
+    {% if pagination %}
+        <div class="pagination">
+            {{ macros.pagination_widget(pagination, '.index') }}
+        </div>
+    {% endif %}
+{% endblock page_content %}
+{% block scripts %}
+{{ super() }}
+{{ pagedown.include_pagedown() }}
+{#{{ pagedown.include_pagedown(local_js='//cdn.bootcss.com/pagedown/1.0/Markdown.Sanitizer.min.js') }}#}
+{% endblock scripts %}
