@@ -2,11 +2,13 @@
 {% block title %}幸福的饺子{% endblock title %}
 {% block head %}
 {{ super() }}
-<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-{% endblock %}
-{% include 'nav.html' %}
+
+{#<link rel="stylesheet" href="{{ url_for('static', filename='static/default/css/styles.css') }}" type="text/css">#}
+{#<link rel="stylesheet" href="../static/default/css/styles.css">#}
+<link rel="stylesheet" href="{{ url_for('static', filename='default/css/styles.css') }}" type="text/css">
+{% endblock head %}
 {% block content %}
+    {% include 'default/nav.html' %}
     <div class="container">
         {% for message in get_flashed_messages() %}
         <div class="alert alert-warning">
@@ -22,4 +24,4 @@
 {{ super() }}
 {#  更换为国内CDN加快访问速度  #}
 {{ moment.include_moment(local_js="//cdn.bootcss.com/moment.js/2.22.1/moment.min.js") }}
-{% endblock %}
+{% endblock scripts %}

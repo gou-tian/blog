@@ -11,6 +11,7 @@ manager = Manager(app)
 migrate = Migrate(app, db)
 
 
+@app.shell_context_processor
 def make_shell_context():
     return dict(app=app, db=db, User=User, Role=Role, Permission=Permission, Post=Post)
 
@@ -38,7 +39,7 @@ manager.add_command('db', MigrateCommand)
 change_cdn_domestic(app)
 
 
-@manager.command
+@app.cli.command
 def test():
     """Run the unit tests."""
     import unittest

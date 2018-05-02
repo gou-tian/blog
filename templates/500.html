@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>内部服务器错误（Internal Server Error）</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}幸福的饺子 - Internal Server Error{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
     <h1>内部服务器错误（Internal Server Error）（代码：500）</h1>
-    <img src="{{ url_for('static', filename = 'images/404_logo.png') }}" alt="">
-</body>
-</html>
+    <img src="../static/images/404_logo.png" alt="Internal Server Error">
+</div>
+{% endblock %}

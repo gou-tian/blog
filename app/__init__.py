@@ -33,11 +33,14 @@ def create_app(config_name):
 
     # 注册蓝本
     from .main import main as main_blueprint
-    print(type(main_blueprint))
     app.register_blueprint(main_blueprint)
     # 用户登录蓝本
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
+
+    # REST API接口蓝本
+    from .api_1_0 import api as api_1_0_blueprint
+    app.register_blueprint(api_1_0_blueprint, url_prefix='/api/v1.0')
 
     # 附加路由和自定义错误页面
     return app

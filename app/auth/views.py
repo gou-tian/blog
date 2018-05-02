@@ -65,7 +65,6 @@ def confirm(token):
 # 过滤未确认账户
 @auth.before_app_request
 def before_request():
-    # print(current_user.ping())
     if current_user.is_authenticated:
         # 更新已登录用的访问时间
         current_user.ping()

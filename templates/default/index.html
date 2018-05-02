@@ -18,22 +18,15 @@
             {{ wtf.quick_form(form) }}
         {% endif %}
     </div>
-    <ul class="posts">
-        {% for post in posts %}
-            <li>
-                <div class="profile-thumbnail">
-                <a href="{{ url_for('.user', username=post.author.username) }}">
-                    <img src="{{ post.author.gravatar(size=40) }}" alt="{{ post.author.username }}" class="img-rounded profile-thumbnail">
-                </a>
-            </div>
-                <div class="post-date">{{ moment(post.timestamp).format("YYYY年MM月DD日HH时") }}</div>
-                <div class="post-author">
-                    <a href="{{ url_for('.user', username=post.author.username) }}">{{ post.author.username }}</a>
-                </div>
-                <div class="post-body">{{ post.body }}</div>
-            </li>
-        {% endfor %}
-    </ul>
+    <div class="post-tabs">
+        <ul class="nav nav-tabs">
+            <li{% if not show_followed %} class="active"{% endif %}><a href="{{ url_for('.show_all') }}">All</a></li>
+            {% if current_user.is_authenticated %}
+            <li{% if show_followed %} class="active"{% endif %}><a href="{{ url_for('.show_followed') }}">Followers</a></li>
+            {% endif %}
+        </ul>
+        {% include 'default/_posts.html' %}
+    </div>
     {% include 'default/_posts.html' %}
     {% if pagination %}
         <div class="pagination">
@@ -42,7 +35,6 @@
     {% endif %}
 {% endblock page_content %}
 {% block scripts %}
-{{ super() }}
-{{ pagedown.include_pagedown() }}
-{#{{ pagedown.include_pagedown(local_js='//cdn.bootcss.com/pagedown/1.0/Markdown.Sanitizer.min.js') }}#}
+    {{ super() }}
+    {{ pagedown.include_pagedown() }}
 {% endblock scripts %}

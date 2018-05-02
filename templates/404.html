@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>页面不存在（Page Not Found）</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}幸福的饺子 - Page Not Found{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
     <h1>页面不存在（Page Not Found）（代码：404）</h1>
-    <img src="{{ url_for('static', filename = 'images/404_logo.png', _external=True) }}" alt="Page Not Found">
-</body>
-</html>
+    <img src="/static/images/404_logo.png" alt="Page Not Found">
+</div>
+{% endblock %}

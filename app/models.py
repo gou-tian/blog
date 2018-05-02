@@ -3,11 +3,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
 from . import login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-from flask import current_app, request
+from flask import current_app, request, url_for
 from datetime import datetime
 import hashlib
 from markdown import markdown
 import bleach
+from app.exceptions import ValidationError
 
 
 # 权限控制
@@ -84,6 +85,14 @@ class Role(db.Model):
         return '<User %r>' % self.email
 
 
+# 关注关联表
+class Follow(db.Model):
+    __tablename__ = 'follow'
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # 用户
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -108,11 +117,22 @@ class User(UserMixin, db.Model):
     # 文章模型
     avatar_hash = db.Column(db.String(32))
     posts = db.relationship('Post', backref='author', lazy='dynamic')
+    # 使用两个一对多关系实现多对多
+    # 为消除外键歧义，可选参数必须定义foreing_keys指定外键
+    followed = db.relationship('Follow',
+                               foreign_keys=[Follow.follower_id],
+                               backref=db.backref('follower', lazy='joined'),
+                               lazy='dynamic',
+                               cascade='all, delete-orphan')
+    followers = db.relationship('Follow',
+                                foreign_keys=[Follow.followed_id],
+                                backref=db.backref('followed', lazy='joined'),
+                                lazy='dynamic',
+                                cascade='all, delete-orphan')
 
     # 定义默认角色
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
-        print('self', self)
         if self.role is None:
             if self.email == current_app.config['FLASKY_ADMIN']:
                 self.role = Role.query.filter_by(name='Administrator').first()
@@ -120,11 +140,11 @@ class User(UserMixin, db.Model):
                 self.role = Role.query.filter_by(default=True).first()
             if self.email is not None and self.avatar_hash is None:
                 self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexdigest()
+        self.follow(self)
 
     # 更新用户最后访问时间
     def ping(self):
         self.last_seen = datetime.utcnow()
-        print('用户最后一次访问时间：', self.last_seen)
         db.session.add(self)
 
     @property
@@ -202,6 +222,62 @@ class User(UserMixin, db.Model):
         return '{url}/{hash}?s={size}&d={default}&r={rationg}'.format(url=url, hash=hash, size=size, default=default,
                                                                       rationg=rationg)
 
+    # 关注关系辅助方法
+    def follow(self, user):
+        if not self.is_following(user):
+            f = Follow(follower=self, followed=user)
+            db.session.add(f)
+
+    def unfollow(self, user):
+        f = self.followed.filter_by(followed_id=user.id).first()
+        if f:
+            db.session.delete(f)
+
+    def is_following(self, user):
+        if user.id is None:
+            return False
+        return self.followed.filter_by(
+            followed_id=user.id).first() is not None
+
+    def is_followed_by(self, user):
+        if user.id is None:
+            return False
+        return self.followers.filter_by(
+            follower_id=user.id).first() is not None
+
+    @property
+    def followed_posts(self):
+        return Post.query.join(Follow, Follow.followed_id == Post.author_id) \
+            .filter(Follow.follower_id == self.id)
+
+    # 支持基于令牌的认证
+    def generate_auth_token(self, expiration):
+        s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
+        return s.dumps({'id': self.id})
+
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return None
+        return User.query.get(data['id'])
+
+    # 把用户转换成 JSON 格式的序列化字典
+    def to_json(self):
+        json_user = {
+            'url': url_for('api.get_post', id=self.id, _external=True),
+            'username': self.username,
+            'member_since': self.member_since,
+            'last_seen': self.last_seen,
+            'posts': url_for('api.get_user_posts', id=self.id, _external=True),
+            'followed_posts': url_for('api.get_user_followed_posts',
+                                      id=self.id, _external=True),
+            'post_count': self.posts.count()
+        }
+        return json_user
+
     def __repr__(self):
         return '<Role %r>' % self.username
 
@@ -224,6 +300,7 @@ class Post(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     body_html = db.Column(db.Text)
+    comments = db.relationship('Comment', backref='post', lazy='dynamic')
 
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
@@ -233,6 +310,64 @@ class Post(db.Model):
         target.body_html = bleach.linkify(bleach.clean(
             markdown(value, output_format='html'),
             tags=allowed_tags, strip=True))
+
+    # 把文章转换成 JSON 格式的序列化字典
+    def to_json(self):
+        json_post = {
+            'url': url_for('api.get_post', id=self.id),
+            'body': self.body,
+            'body_html': self.body_html,
+            'timestamp': self.timestamp,
+            'author_url': url_for('api.get_post', id=self.author_id),
+            'comments_url': url_for('api.get_post', id=self.id),
+            'comment_count': self.comments.count()
+        }
+        return json_post
+
+    # 从 JSON 格式数据创建一篇博客文章
+    @staticmethod
+    def from_json(json_post):
+        body = json_post.get('body')
+        if body is None or body == '':
+            raise ValidationError('博客文章没有主体内容')
+        return Post(body=body)
+
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    disabled = db.Column(db.Boolean)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i',
+                        'strong']
+        target.body_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tags, strip=True))
+
+    def to_json(self):
+        json_comment = {
+            'url': url_for('api.get_comment', id=self.id),
+            'post_url': url_for('api.get_post', id=self.post_id),
+            'body': self.body,
+            'body_html': self.body_html,
+            'timestamp': self.timestamp,
+            'author_url': url_for('api.get_user', id=self.author_id),
+        }
+        return json_comment
+
+    @staticmethod
+    def from_json(json_comment):
+        body = json_comment.get('body')
+        if body is None or body == '':
+            raise ValidationError('comment does not have a body')
+        return Comment(body=body)
 
 
 login_manager.anonymous_user = AnonymousUser
