@@ -129,6 +129,8 @@ class User(UserMixin, db.Model):
                                 backref=db.backref('followed', lazy='joined'),
                                 lazy='dynamic',
                                 cascade='all, delete-orphan')
+    # users 和 posts 表与 comments 表之间的一对多关系
+    comments = db.relationship('Comment', backref='author', lazy='dynamic')
 
     # 定义默认角色
     def __init__(self, **kwargs):
@@ -300,6 +302,7 @@ class Post(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     body_html = db.Column(db.Text)
+    # users 和 posts 表与 comments 表之间的一对多关系
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
 
     @staticmethod
@@ -372,6 +375,7 @@ class Comment(db.Model):
 
 login_manager.anonymous_user = AnonymousUser
 db.event.listen(Post.body, 'set', Post.on_changed_body)
+db.event.listen(Comment.body, 'set', Comment.on_changed_body)
 
 
 @login_manager.user_loader

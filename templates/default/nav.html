@@ -25,6 +25,9 @@
                         <li><a href="{{ url_for('auth.login') }}">登录</a></li>
                         <li><a href="{{ url_for('auth.login') }}">当前用户：游客</a></li>
                     {% endif %}
+                    {% if current_user.can(Permission.MODERATE_COMMENTS) %}
+                        <li><a href="{{ url_for('main.moderate') }}">Moderate Comments</a></li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

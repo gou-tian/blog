@@ -23,6 +23,9 @@
                 {% elif current_user.is_administrator %}
                     <a href="{{ url_for('.edit', id=post.id) }}"><span class="label label-primary">编辑[管理员]</span></a>
                 {% endif %}
+                <a href="{{ url_for('.post', id=post.id) }}#comments">
+                    <span class="label label-primary">{{ post.comments.count() }} 评论</span>
+                </a>
             </div>
         </div>
     </li>
